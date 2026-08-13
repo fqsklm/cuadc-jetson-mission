@@ -1,0 +1,15 @@
+config/config.json
+data/
+logs/
+models/*.engine
+models/*.pt
+models/*.onnx
+*.pyc
+__pycache__/
+.pytest_cache/
+.venv/
+*.tar.gz
+*.bag
+*.db3
+photos/
+state.json
