@@ -6,6 +6,7 @@ from collections import deque
 from pathlib import Path
 
 from .mission import MissionItem, read_qgc_wpl, waypoint
+from .time_sync import BootTimeMapper, monotonic_to_unix_ns, sample_clock_pair
 from .types import FlightSnapshot, GeoPoint, Pose, TargetLock
 
 
@@ -18,7 +19,9 @@ class MavlinkFlightLink:
         self.connection = None
         self.snapshot = FlightSnapshot()
         self._attitude = (0.0, 0.0, 0.0)
+        self._attitude_history: deque[tuple[float, float, float, float, int, float]] = deque(maxlen=800)
         self._pose_history: deque[Pose] = deque(maxlen=400)
+        self._boot_time_mapper = BootTimeMapper()
         self._last_own_heartbeat_s = float("-inf")
 
     def connect(self) -> None:
@@ -47,6 +50,7 @@ class MavlinkFlightLink:
             mavutil.mavlink.MAVLINK_MSG_ID_ATTITUDE: 20,
             mavutil.mavlink.MAVLINK_MSG_ID_RC_CHANNELS: 5,
             mavutil.mavlink.MAVLINK_MSG_ID_MISSION_CURRENT: 2,
+            mavutil.mavlink.MAVLINK_MSG_ID_SYSTEM_TIME: 1,
         }
         for message_id, hz in rates.items():
             self.connection.mav.command_long_send(
@@ -82,30 +86,48 @@ class MavlinkFlightLink:
         return self.snapshot
 
     def _handle(self, message) -> None:
-        from pymavlink import mavutil
-
         now = time.monotonic()
         kind = message.get_type()
         if kind == "HEARTBEAT":
+            from pymavlink import mavutil
+
             self.snapshot.connected = True
             self.snapshot.last_heartbeat_s = now
             self.snapshot.armed = bool(message.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
             self.snapshot.mode = mavutil.mode_string_v10(message).upper()
         elif kind == "ATTITUDE":
             self._attitude = (float(message.roll), float(message.pitch), float(message.yaw) % (2 * math.pi))
+            mapped_s, delay_s = self._message_monotonic(message, now)
+            self._attitude_history.append((*self._attitude, mapped_s, int(message.time_boot_ms), delay_s))
         elif kind == "GLOBAL_POSITION_INT":
+            mapped_s, delay_s = self._message_monotonic(message, now)
+            attitude, attitude_uncertainty_s = self._attitude_at(mapped_s)
             self.snapshot.pose = Pose(
-                now,
+                mapped_s,
                 message.lat / 1e7,
                 message.lon / 1e7,
                 message.relative_alt / 1000.0,
-                *self._attitude,
+                *attitude,
                 math.hypot(message.vx, message.vy) / 100.0,
+                int(message.time_boot_ms),
+                max(delay_s, attitude_uncertainty_s),
             )
             self._pose_history.append(self.snapshot.pose)
         elif kind == "GPS_RAW_INT":
             self.snapshot.gps_fix_type = int(message.fix_type)
             self.snapshot.satellites = int(message.satellites_visible)
+        elif kind == "SYSTEM_TIME":
+            unix_usec = int(message.time_unix_usec)
+            if unix_usec > 0:
+                source_monotonic_s, link_delay_s = self._message_monotonic(message, now)
+                clock_pair = sample_clock_pair()
+                jetson_unix_ns = monotonic_to_unix_ns(round(source_monotonic_s * 1_000_000_000), clock_pair)
+                self.snapshot.autopilot_unix_usec = unix_usec
+                self.snapshot.autopilot_utc_offset_s = unix_usec / 1_000_000.0 - jetson_unix_ns / 1_000_000_000.0
+                self.snapshot.autopilot_utc_uncertainty_s = (
+                    link_delay_s + clock_pair.sampling_uncertainty_ns / 1_000_000_000.0
+                )
+                self.snapshot.last_system_time_s = source_monotonic_s
         elif kind == "MISSION_CURRENT":
             self.snapshot.mission_index = int(message.seq)
         elif kind == "MISSION_COUNT":
@@ -113,11 +135,60 @@ class MavlinkFlightLink:
         elif kind == "RC_CHANNELS":
             self.snapshot.rc_channels = {i: int(getattr(message, f"chan{i}_raw")) for i in range(1, 19)}
 
+    def _message_monotonic(self, message, received_s: float) -> tuple[float, float]:
+        boot_ms = getattr(message, "time_boot_ms", None)
+        if boot_ms is None:
+            return received_s, 0.0
+        return self._boot_time_mapper.observe(int(boot_ms), received_s)
+
+    @staticmethod
+    def _angle_lerp(start: float, end: float, fraction: float) -> float:
+        delta = (end - start + math.pi) % (2 * math.pi) - math.pi
+        return (start + fraction * delta) % (2 * math.pi)
+
+    def _attitude_at(self, monotonic_s: float) -> tuple[tuple[float, float, float], float]:
+        if not self._attitude_history:
+            return self._attitude, float("inf")
+        item = min(self._attitude_history, key=lambda entry: abs(entry[3] - monotonic_s))
+        return item[:3], abs(item[3] - monotonic_s) + item[5]
+
+    @classmethod
+    def _interpolate_pose(cls, before: Pose, after: Pose, monotonic_s: float) -> Pose:
+        span = after.monotonic_s - before.monotonic_s
+        if span <= 0:
+            return before
+        fraction = min(1.0, max(0.0, (monotonic_s - before.monotonic_s) / span))
+        lerp = lambda a, b: a + fraction * (b - a)
+        if before.source_time_boot_ms is not None and after.source_time_boot_ms is not None:
+            source_time_boot_ms = round(lerp(before.source_time_boot_ms, after.source_time_boot_ms))
+        else:
+            source_time_boot_ms = before.source_time_boot_ms or after.source_time_boot_ms
+        return Pose(
+            monotonic_s,
+            lerp(before.lat, after.lat),
+            lerp(before.lon, after.lon),
+            lerp(before.alt_rel_m, after.alt_rel_m),
+            cls._angle_lerp(before.roll_rad, after.roll_rad, fraction),
+            cls._angle_lerp(before.pitch_rad, after.pitch_rad, fraction),
+            cls._angle_lerp(before.yaw_rad, after.yaw_rad, fraction),
+            lerp(before.groundspeed_mps, after.groundspeed_mps),
+            source_time_boot_ms,
+            max(before.timestamp_uncertainty_s, after.timestamp_uncertainty_s),
+            span,
+        )
+
     def pose_at(self, monotonic_s: float, max_age_s: float = 0.25) -> Pose | None:
         if not self._pose_history:
             return None
-        pose = min(self._pose_history, key=lambda item: abs(item.monotonic_s - monotonic_s))
-        return pose if abs(pose.monotonic_s - monotonic_s) <= max_age_s else None
+        poses = list(self._pose_history)
+        before = next((pose for pose in reversed(poses) if pose.monotonic_s <= monotonic_s), None)
+        after = next((pose for pose in poses if pose.monotonic_s >= monotonic_s), None)
+        if before is not None and after is not None:
+            if max(monotonic_s - before.monotonic_s, after.monotonic_s - monotonic_s) > max_age_s:
+                return None
+            return self._interpolate_pose(before, after, monotonic_s)
+        nearest = before or after
+        return nearest if nearest and abs(nearest.monotonic_s - monotonic_s) <= max_age_s else None
 
     def upload_target_route(self, target: TargetLock) -> None:
         altitude = float(self.mission_config["target_altitude_m"])

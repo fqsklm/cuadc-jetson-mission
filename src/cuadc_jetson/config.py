@@ -68,6 +68,17 @@ def validate(config: AppConfig) -> None:
     _require(camera, "device", str)
     if int(camera.get("width", 0)) <= 0 or int(camera.get("height", 0)) <= 0:
         raise ConfigError("camera.width/height 必须为正数")
+    if camera.get("backend", "gstreamer") not in {"gstreamer", "opencv"}:
+        raise ConfigError("camera.backend 必须为 gstreamer 或 opencv")
+
+    time_sync = config.raw.get("time_sync", {})
+    if not isinstance(time_sync, dict):
+        raise ConfigError("time_sync 必须是对象")
+    for key in ("max_offset_ms", "max_root_dispersion_ms", "check_interval_s", "pose_alignment_holdback_ms"):
+        if key in time_sync and (not isinstance(time_sync[key], (int, float)) or float(time_sync[key]) < 0):
+            raise ConfigError(f"time_sync.{key} 必须是非负数")
+    if int(time_sync.get("max_stratum", 4)) < 1:
+        raise ConfigError("time_sync.max_stratum 必须为正整数")
 
     vision = config.section("vision")
     for key in ("fx", "fy", "cx", "cy"):

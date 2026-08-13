@@ -34,6 +34,9 @@ class Pose:
     pitch_rad: float
     yaw_rad: float
     groundspeed_mps: float = 0.0
+    source_time_boot_ms: int | None = None
+    timestamp_uncertainty_s: float = 0.0
+    interpolation_span_s: float = 0.0
 
 
 @dataclass
@@ -48,6 +51,10 @@ class FlightSnapshot:
     rc_channels: dict[int, int] = field(default_factory=dict)
     pose: Pose | None = None
     last_heartbeat_s: float = 0.0
+    autopilot_unix_usec: int | None = None
+    autopilot_utc_offset_s: float | None = None
+    autopilot_utc_uncertainty_s: float | None = None
+    last_system_time_s: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -65,4 +72,3 @@ class TargetLock:
     point: GeoPoint
     observations: int
     mean_confidence: float
-
