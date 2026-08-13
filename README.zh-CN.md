@@ -1,5 +1,7 @@
 # CUADC Jetson-only 全流程任务程序
 
+时间对齐方案与误差预算见 [TIME-SYNCHRONIZATION.zh-CN.md](TIME-SYNCHRONIZATION.zh-CN.md)。
+
 摄像头内参标定使用 ROS 2 的操作步骤见 [ROS_CAMERA_CALIBRATION.zh-CN.md](ROS_CAMERA_CALIBRATION.zh-CN.md)。标定只临时使用 ROS，任务运行时仍直接读取 UVC 摄像头。
 
 这个目录是面向 **NVIDIA Jetson + ZeroOne X6 Ultra + USB UVC 摄像头** 的新实现。它不需要树莓派、NFS、MQTT 或第二台机载计算机。

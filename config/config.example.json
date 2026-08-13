@@ -2,12 +2,21 @@
   "dry_run": true,
   "camera": {
     "device": "/dev/v4l/by-id/REPLACE_WITH_CAMERA_ID",
+    "backend": "gstreamer",
+    "allow_opencv_fallback": false,
     "width": 2592,
     "height": 1944,
     "fps": 30,
     "fourcc": "MJPG",
     "jpeg_quality": 92,
-    "save_interval_s": 0.5
+    "save_interval_s": 0.5,
+    "timestamp_queue_frames": 120,
+    "gstreamer_clock_uncertainty_ns": 1000000,
+    "preview_width": 1024,
+    "preview_height": 768,
+    "preview_queue_frames": 12,
+    "preview_match_tolerance_ms": 2.0,
+    "preview_wait_ms": 20.0
   },
   "vision": {
     "target_model": "/opt/cuadc-mission/models/target.engine",
@@ -71,5 +80,13 @@
   "storage": {
     "directory": "/var/lib/cuadc-mission/photos",
     "state_file": "/var/lib/cuadc-mission/state.json"
+  },
+  "time_sync": {
+    "require_qualified_utc": false,
+    "max_offset_ms": 10.0,
+    "max_root_dispersion_ms": 20.0,
+    "max_stratum": 4,
+    "check_interval_s": 10.0,
+    "pose_alignment_holdback_ms": 80.0
   }
 }

@@ -12,7 +12,10 @@ config_dir=/etc/cuadc-mission
 data_dir=/var/lib/cuadc-mission
 
 apt-get update
-apt-get install -y python3-venv python3-pip v4l-utils ffmpeg usbutils
+apt-get install -y \
+  python3-venv python3-pip python3-gi gir1.2-gstreamer-1.0 \
+  gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+  v4l-utils ffmpeg usbutils
 
 if ! id cuadc >/dev/null 2>&1; then
   useradd --system --home-dir "$data_dir" --create-home --shell /usr/sbin/nologin cuadc
@@ -21,7 +24,7 @@ usermod -a -G video,dialout cuadc
 
 install -d -o root -g root -m 0755 "$install_dir" "$config_dir"
 install -d -o cuadc -g cuadc -m 0750 "$data_dir" "$data_dir/photos"
-cp -a "$project_dir/src" "$project_dir/pyproject.toml" "$install_dir/"
+cp -a "$project_dir/src" "$project_dir/scripts" "$project_dir/pyproject.toml" "$install_dir/"
 python3 -m venv --system-site-packages "$install_dir/.venv"
 "$install_dir/.venv/bin/pip" install --upgrade pip
 "$install_dir/.venv/bin/pip" install "$install_dir"

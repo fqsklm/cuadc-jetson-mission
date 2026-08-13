@@ -70,3 +70,10 @@ def test_dynamic_upload_refuses_missing_route_files(tmp_path):
     data["safety"]["release_polygon"] = [[30, 120], [30, 121], [31, 121]]
     with pytest.raises(ConfigError):
         load_config(write(tmp_path, data))
+
+
+def test_time_sync_rejects_negative_threshold(tmp_path):
+    data = example_config()
+    data["time_sync"] = {"max_offset_ms": -1}
+    with pytest.raises(ConfigError, match="max_offset_ms"):
+        load_config(write(tmp_path, data))

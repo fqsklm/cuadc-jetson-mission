@@ -1,6 +1,7 @@
 [Unit]
 Description=CUADC Jetson-only mission supervisor
-After=multi-user.target
+After=network-online.target time-sync.target
+Wants=network-online.target time-sync.target
 
 [Service]
 Type=simple
