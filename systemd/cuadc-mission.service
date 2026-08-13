@@ -1,0 +1,22 @@
+[Unit]
+Description=CUADC Jetson-only mission supervisor
+After=multi-user.target
+
+[Service]
+Type=simple
+User=cuadc
+Group=cuadc
+SupplementaryGroups=video dialout
+WorkingDirectory=/opt/cuadc-mission
+ExecStart=/opt/cuadc-mission/.venv/bin/cuadc-mission --config /etc/cuadc-mission/config.json
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/cuadc-mission
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,75 @@
+{
+  "dry_run": true,
+  "camera": {
+    "device": "/dev/v4l/by-id/REPLACE_WITH_CAMERA_ID",
+    "width": 2592,
+    "height": 1944,
+    "fps": 30,
+    "fourcc": "MJPG",
+    "jpeg_quality": 92,
+    "save_interval_s": 0.5
+  },
+  "vision": {
+    "target_model": "/opt/cuadc-mission/models/target.engine",
+    "people_model": "",
+    "task": "obb",
+    "input_size": 1024,
+    "detect_hz": 10,
+    "confidence": 0.55,
+    "selection": "max_numeric",
+    "label_priorities": {},
+    "people_confidence": 0.4,
+    "fusion_radius_m": 8.0,
+    "min_observations": 6,
+    "fx": 1561.26562,
+    "fy": 1559.74267,
+    "cx": 1313.04876,
+    "cy": 1033.89521,
+    "distortion_model": "plumb_bob",
+    "distortion_coefficients": [0.015134, -0.034051, 0.00078, 0.00178, 0.0],
+    "camera_to_body_rpy_deg": [0.0, -90.0, 0.0]
+  },
+  "flight": {
+    "firmware": "ardupilot",
+    "device": "/dev/cuadc-fc",
+    "baud": 921600,
+    "source_system": 1,
+    "source_component": 191,
+    "connect_timeout_s": 15,
+    "mission_upload_timeout_s": 20,
+    "command_ack_timeout_s": 2
+  },
+  "mission": {
+    "dynamic_upload_enabled": false,
+    "survey_end_margin": 1,
+    "survey_mission_file": "",
+    "target_altitude_m": 20.0,
+    "ingress": [],
+    "egress": [],
+    "landing_mission_file": ""
+  },
+  "safety": {
+    "takeoff_alt_m": 5.0,
+    "heartbeat_timeout_s": 2.0,
+    "camera_timeout_s": 1.0,
+    "pose_max_age_s": 0.25,
+    "target_reach_radius_m": 8.0,
+    "forbidden_cooldown_s": 5.0,
+    "forbidden_labels": ["person"],
+    "release_polygon": []
+  },
+  "release": {
+    "enabled": false,
+    "require_rc_authorization": true,
+    "auth_rc_channel": 8,
+    "auth_pwm_min": 1800,
+    "servo_channel": 9,
+    "closed_pwm": 1100,
+    "open_pwm": 1900,
+    "pulse_seconds": 0.5
+  },
+  "storage": {
+    "directory": "/var/lib/cuadc-mission/photos",
+    "state_file": "/var/lib/cuadc-mission/state.json"
+  }
+}

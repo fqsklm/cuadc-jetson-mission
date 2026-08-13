@@ -1,0 +1,4 @@
+# Replace VID/PID/serial using: udevadm info --query=property --name=/dev/ttyUSB0
+# A stable symlink prevents ttyUSB numbering changes when the USB camera reconnects.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="REPLACE_VID", ATTRS{idProduct}=="REPLACE_PID", ATTRS{serial}=="REPLACE_SERIAL", SYMLINK+="cuadc-fc", GROUP="dialout", MODE="0660"
+

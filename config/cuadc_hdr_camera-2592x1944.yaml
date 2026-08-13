@@ -1,0 +1,26 @@
+image_width: 2592
+image_height: 1944
+camera_name: cuadc_hdr_camera
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [1561.26562, 0.0, 1313.04876,
+         0.0, 1559.74267, 1033.89521,
+         0.0, 0.0, 1.0]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [0.015134, -0.034051, 0.000780, 0.001780, 0.000000]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1.0, 0.0, 0.0,
+         0.0, 1.0, 0.0,
+         0.0, 0.0, 1.0]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [1551.36876, 0.0, 1319.9821, 0.0,
+         0.0, 1560.69793, 1036.04427, 0.0,
+         0.0, 0.0, 1.0, 0.0]

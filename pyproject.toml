@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cuadc-jetson-mission"
+version = "0.1.0"
+description = "Jetson-only fixed-wing survey mission supervisor"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.23,<3",
+  "pymavlink>=2.4.41,<3",
+]
+
+[project.optional-dependencies]
+vision = ["ultralytics>=8.3,<9", "opencv-python-headless>=4.8,<5"]
+test = ["pytest>=8,<9"]
+
+[project.scripts]
+cuadc-mission = "cuadc_jetson.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
