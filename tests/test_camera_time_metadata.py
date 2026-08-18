@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from cuadc_jetson.camera import CameraFrame, UsbCamera
+from cuadc_jetson.camera import CameraFrame, DecodedPreview, UsbCamera
 
 
 class FakeCv2:
@@ -53,3 +53,27 @@ def test_camera_rejects_unknown_backend():
     camera = UsbCamera({"backend": "unknown"})
     with pytest.raises(ValueError, match="unsupported camera backend"):
         camera.start()
+
+
+def test_decoded_image_reports_direct_frame_source():
+    image = object()
+    camera = UsbCamera({})
+    frame = CameraFrame(1, 1.0, 2, image, 1, 2, 3)
+
+    decoded, source = camera.decoded_image_with_source(frame)
+
+    assert decoded is image
+    assert source == "frame"
+    assert camera.decoded_image(frame) is image
+
+
+def test_decoded_image_reports_gstreamer_preview_source():
+    image = object()
+    camera = UsbCamera({"preview_wait_ms": 0})
+    camera._previews.append(DecodedPreview(1_000_000_000, image))
+    frame = CameraFrame(1, 1.0, 2, None, 1, 2, 3, encoded_jpeg=b"unused")
+
+    decoded, source = camera.decoded_image_with_source(frame)
+
+    assert decoded is image
+    assert source == "gstreamer-preview"

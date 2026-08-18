@@ -19,7 +19,7 @@
     "preview_wait_ms": 20.0
   },
   "vision": {
-    "target_model": "/opt/cuadc-mission/models/target.engine",
+    "target_model": "/opt/cuadc-mission/models/target.pt",
     "people_model": "",
     "task": "obb",
     "input_size": 1024,

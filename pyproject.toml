@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-vision = ["ultralytics>=8.3,<9", "opencv-python-headless>=4.8,<5"]
+vision = ["ultralytics==8.3.176", "opencv-python-headless>=4.8,<5"]
 test = ["pytest>=8,<9"]
 
 [project.scripts]

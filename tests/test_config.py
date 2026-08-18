@@ -9,7 +9,7 @@ def example_config():
     return {
         "dry_run": True,
         "camera": {"device": "/dev/video0", "width": 1920, "height": 1080},
-        "vision": {"target_model": "target.engine", "people_model": "", "selection": "max_numeric", "fx": 1000, "fy": 1000, "cx": 960, "cy": 540},
+        "vision": {"target_model": "target.pt", "people_model": "", "selection": "max_numeric", "fx": 1000, "fy": 1000, "cx": 960, "cy": 540},
         "flight": {"firmware": "ardupilot", "device": "/dev/cuadc-fc", "baud": 921600},
         "mission": {"dynamic_upload_enabled": False, "survey_mission_file": "", "landing_mission_file": "", "ingress": [], "egress": []},
         "safety": {"release_polygon": []},
@@ -38,7 +38,7 @@ def test_release_refuses_missing_safety_artifacts(tmp_path, missing):
         "servo_channel": 9,
     }
     data["mission"]["dynamic_upload_enabled"] = True
-    data["vision"]["people_model"] = "people.engine"
+    data["vision"]["people_model"] = "people.pt"
     survey = tmp_path / "survey.waypoints"
     landing = tmp_path / "landing.waypoints"
     survey.write_text("QGC WPL 110\n1\t0\t3\t22\t0\t0\t0\t0\t30\t120\t30\t1\n", encoding="utf-8")
@@ -76,4 +76,13 @@ def test_time_sync_rejects_negative_threshold(tmp_path):
     data = example_config()
     data["time_sync"] = {"max_offset_ms": -1}
     with pytest.raises(ConfigError, match="max_offset_ms"):
+        load_config(write(tmp_path, data))
+
+
+@pytest.mark.parametrize("field", ["target_model", "people_model"])
+@pytest.mark.parametrize("suffix", [".engine", ".onnx"])
+def test_config_rejects_non_pt_models(tmp_path, field, suffix):
+    data = example_config()
+    data["vision"][field] = f"model{suffix}"
+    with pytest.raises(ConfigError, match=r"必须是 \.pt 文件"):
         load_config(write(tmp_path, data))
