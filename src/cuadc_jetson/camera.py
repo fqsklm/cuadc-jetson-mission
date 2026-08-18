@@ -234,9 +234,9 @@ class UsbCamera:
                 self._previews.append(DecodedPreview(preview_ns, image))
                 self._preview_ready.notify_all()
 
-    def decoded_image(self, frame: CameraFrame):
+    def decoded_image_with_source(self, frame: CameraFrame):
         if frame.image is not None:
-            return frame.image
+            return frame.image, "frame"
         tolerance_ns = int(float(self.config.get("preview_match_tolerance_ms", 2.0)) * 1_000_000)
         wait_deadline = time.monotonic() + float(self.config.get("preview_wait_ms", 20.0)) / 1000.0
         with self._preview_ready:
@@ -247,7 +247,7 @@ class UsbCamera:
                         key=lambda item: abs(item.monotonic_ns - round(frame.monotonic_s * 1_000_000_000)),
                     )
                     if abs(preview.monotonic_ns - round(frame.monotonic_s * 1_000_000_000)) <= tolerance_ns:
-                        return preview.image
+                        return preview.image, "gstreamer-preview"
                 remaining = wait_deadline - time.monotonic()
                 if remaining <= 0:
                     break
@@ -260,6 +260,10 @@ class UsbCamera:
         image = cv2.imdecode(np.frombuffer(frame.encoded_jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
         if image is None:
             raise RuntimeError(f"MJPEG decode failed for frame {frame.sequence}")
+        return image, "opencv-jpeg-fallback"
+
+    def decoded_image(self, frame: CameraFrame):
+        image, _source = self.decoded_image_with_source(frame)
         return image
 
     def latest(self) -> CameraFrame | None:

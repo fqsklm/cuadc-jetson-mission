@@ -81,6 +81,14 @@ def validate(config: AppConfig) -> None:
         raise ConfigError("time_sync.max_stratum 必须为正整数")
 
     vision = config.section("vision")
+    target_model = _require(vision, "target_model", str)
+    if Path(target_model).suffix.lower() != ".pt":
+        raise ConfigError("vision.target_model 必须是 .pt 文件；当前项目已停用 engine/ONNX")
+    people_model = vision.get("people_model", "")
+    if not isinstance(people_model, str):
+        raise ConfigError("vision.people_model 必须是字符串")
+    if people_model and Path(people_model).suffix.lower() != ".pt":
+        raise ConfigError("vision.people_model 必须是 .pt 文件；当前项目已停用 engine/ONNX")
     for key in ("fx", "fy", "cx", "cy"):
         value = vision.get(key)
         if not isinstance(value, (int, float)) or not math.isfinite(float(value)):

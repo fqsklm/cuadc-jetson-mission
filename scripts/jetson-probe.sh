@@ -28,8 +28,7 @@ ip -brief address
 
 echo "== NVIDIA runtime =="
 nvidia-smi 2>/dev/null || tegrastats --interval 1000 --count 1 2>/dev/null || true
-nvcc --version 2>/dev/null || true
-dpkg-query -W 'libnvinfer*' 'libcudnn*' 2>/dev/null || true
+dpkg-query -W 'libcudnn*' 2>/dev/null || true
 
 echo "== Python AI stack =="
 python3 --version
@@ -38,7 +37,7 @@ import importlib
 import json
 
 result = {}
-for name in ("numpy", "cv2", "torch", "torchvision", "tensorrt", "ultralytics"):
+for name in ("numpy", "cv2", "torch", "torchvision", "ultralytics"):
     try:
         module = importlib.import_module(name)
         result[name] = getattr(module, "__version__", "installed/version unavailable")
